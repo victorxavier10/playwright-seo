@@ -1,0 +1,63 @@
+{
+  "name": "playwright-seo",
+  "version": "0.1.0",
+  "description": "SEO checks for Playwright — simples, configurável e agnóstico.",
+  "license": "MIT",
+  "author": "Victor Xavier",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/victorxavier10/playwright-seo.git"
+  },
+  "homepage": "https://github.com/victorxavier10/playwright-seo",
+  "bugs": {
+    "url": "https://github.com/victorxavier10/playwright-seo/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.mjs",
+      "require": "./dist/config.cjs"
+    }
+  },
+  "bin": {
+    "playwright-seo-config": "./dist/bin/cli.cjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run clean && npm run build && npm run typecheck"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.41.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^24.2.1",
+    "tsup": "^8.1.0",
+    "typescript": "^5.5.0"
+  },
+  "keywords": [
+    "playwright",
+    "seo",
+    "testing",
+    "a11y",
+    "lighthouse"
+  ],
+  "dependencies": {
+    "simple-update-notifier": "^2.0.0"
+  }
+}
