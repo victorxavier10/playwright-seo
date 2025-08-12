@@ -10,10 +10,10 @@
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["node"],               
-    "lib": ["ES2021", "DOM", "DOM.Iterable"],  
+    "types": ["node"],
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
     "noEmit": true
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules", "tsup.config.ts"]
 }
