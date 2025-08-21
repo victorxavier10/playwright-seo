@@ -57,6 +57,9 @@
   "peerDependencies": {
     "@playwright/test": ">=1.41.0"
   },
+  "dependencies": {
+    "simple-update-notifier": "^2.0.0"
+  },
   "devDependencies": {
     "@playwright/test": "^1.45.0",
     "@types/node": "^24.2.1",
@@ -69,8 +72,5 @@
     "testing",
     "a11y",
     "lighthouse"
-  ],
-  "dependencies": {
-    "simple-update-notifier": "^2.0.0"
-  }
+  ]
 }
