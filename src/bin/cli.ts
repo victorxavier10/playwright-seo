@@ -6,12 +6,12 @@ import { createRequire } from 'node:module';
 import simpleUpdateNotifier from 'simple-update-notifier';
 
 const require = createRequire(import.meta.url);
-// package.json (nome/versão) para o notificador
+// package.json (name/version) for notifier
 const pkgJson = require('../../package.json') as { name: string; version: string };
 
 const FILE = path.resolve(process.cwd(), 'playwright-seo.config.ts');
 
-// ---- Update notifier (silencioso em CI / pode ser desativado por env)
+// ---- Update notifier (silent in CI / can be disabled by env)
 (function notifyUpdate() {
   const pkg = { name: pkgJson.name, version: pkgJson.version };
   const disabledByEnv = process.env.PLAYWRIGHT_SEO_UPDATE_NOTIFIER === 'false';
@@ -22,10 +22,10 @@ const FILE = path.resolve(process.cwd(), 'playwright-seo.config.ts');
   }
 })();
 
-// ---- Template do arquivo de config
+// ---- Template file config
 const template = `// Config for playwright-seo — generated for you.
 // true = on, false = off. Adjust thresholds as needed.
-import { defineSeoConfig } from 'playwright-seo/config';
+import { defineSeoConfig } from 'playwright-seo';
 
 export default defineSeoConfig({
   // Rules (on/off)
@@ -53,7 +53,9 @@ export default defineSeoConfig({
   // Runner (how the audit is executed)
   runner: {
     // Avoid running the same URL more than once per worker
-    dedupePerWorker: true
+    dedupePerWorker: true,
+    // 'error' => fail test on violations; 'warning' => log only
+    severity: 'error'
   }
 });
 `;

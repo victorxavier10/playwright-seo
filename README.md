@@ -2,11 +2,10 @@
 
 [![npm version](https://img.shields.io/npm/v/playwright-seo.svg?color=blue)](https://www.npmjs.com/package/playwright-seo)
 [![npm downloads](https://img.shields.io/npm/dm/playwright-seo.svg)](https://www.npmjs.com/package/playwright-seo)
-![node version](https://img.shields.io/node/v/playwright-seo.svg)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](#license)
 
-> SEO checks for Playwright — **simple**, **configurable**, and **framework‑agnostic**.  
-> Run lightweight SEO audits automatically after each test or on‑demand, with clean Playwright‑style failure output.
+> SEO checks for Playwright — **simple**, **configurable**, and **framework-agnostic**.  
+> Run lightweight SEO audits automatically after each test or on-demand, with clean Playwright-style output.
 
 ---
 
@@ -18,7 +17,7 @@
 - [Quick Start](#quick-start)
   - [1) Generate config](#1-generate-config)
   - [2) Wire config into Playwright](#2-wire-config-into-playwright)
-  - [3) Enable audit globally (one‑liner)](#3-enable-audit-globally-one-liner)
+  - [3) Enable audit globally (one-liner)](#3-enable-audit-globally-one-liner)
 - [Targeted Usage](#targeted-usage)
   - [Per project (e.g., staging)](#per-project-eg-staging)
   - [Per spec / describe](#per-spec--describe)
@@ -43,14 +42,15 @@
 
 ## Features
 
-- ✅ **Drop‑in wrapper** to run audits automatically after each test
-- ✅ **On‑demand API** (`runSeoChecks`) for focused checks
+- ✅ **Drop-in wrapper** to run audits automatically after each test
+- ✅ **On-demand API** (`runSeoChecks`) for focused checks
 - ✅ **Config file** with **on/off** switches for every rule
-- ✅ **Skip `noindex`** (meta or `X‑Robots‑Tag`)
+- ✅ **Skip `noindex`** (meta or `X-Robots-Tag`)
 - ✅ **Exclude URLs** via glob or RegExp
 - ✅ **Pretty, actionable output**: URL + rule + HTML snippets
-- ✅ **Per‑worker dedupe** to reduce noise on large suites
-- ✅ **Peer dep** on `@playwright/test` — no vendor lock‑in
+- ✅ **Per-worker dedupe** to reduce noise on large suites
+- ✅ **Severity**: choose **`error`** (fail tests) or **`warning`** (log only, don’t fail)
+- ✅ **Peer dep** on `@playwright/test` — no vendor lock-in
 
 ---
 
@@ -67,12 +67,18 @@
 
 ## Installation
 
+### npm
 ```bash
-# with npm
 npm i -D playwright-seo @playwright/test
-
 # (optional) if your editor complains about Node APIs used by the CLI:
 npm i -D @types/node
+```
+
+### Yarn
+```bash
+yarn add -D playwright-seo @playwright/test
+# (optional)
+yarn add -D @types/node
 ```
 
 > The CLI prints a friendly update notice using `simple-update-notifier`. Disable via `PLAYWRIGHT_SEO_UPDATE_NOTIFIER=false` (CI is silent by default).
@@ -83,17 +89,27 @@ npm i -D @types/node
 
 ### 1) Generate config
 
+Create `playwright-seo.config.ts` at your project root.
+
+**npm**
 ```bash
 npx playwright-seo-config
 # or
 npm run playwright-seo-config
 ```
 
-This creates **`playwright-seo.config.ts`** at your project root (safe to edit):
+**Yarn**
+```bash
+yarn playwright-seo-config
+# or
+yarn run playwright-seo-config
+```
+
+This creates **`playwright-seo.config.ts`** (safe to edit):
 
 ```ts
 // playwright-seo.config.ts
-import { defineSeoConfig } from 'playwright-seo/config';
+import { defineSeoConfig } from 'playwright-seo';
 
 export default defineSeoConfig({
   // Rules (on/off)
@@ -121,7 +137,11 @@ export default defineSeoConfig({
   // Runner (how the audit is executed)
   runner: {
     // Avoid running the same URL more than once per worker
-    dedupePerWorker: true
+    dedupePerWorker: true,
+    // Severity:
+    //  - 'error'   => fail test on violations (default)
+    //  - 'warning' => log only, don't fail
+    severity: 'error'
   }
 });
 ```
@@ -132,7 +152,7 @@ export default defineSeoConfig({
 // playwright.config.ts
 import { defineConfig, devices } from '@playwright/test';
 import seoUser from './playwright-seo.config';
-import { toRuleConfig } from 'playwright-seo/config';
+import { toRuleConfig } from 'playwright-seo';
 
 export default defineConfig({
   projects: [
@@ -152,9 +172,10 @@ export default defineConfig({
 });
 ```
 
-> `toRuleConfig` converts your user config into the internal format used by the engine.
+> `toRuleConfig` converts your user config into the internal format used by the engine.  
+> Prefer importing from the **root** (`playwright-seo`). The legacy subpath (`playwright-seo/config`) also works.
 
-### 3) Enable audit globally (one‑liner)
+### 3) Enable audit globally (one-liner)
 
 Create a wrapper once and use it in all specs:
 
@@ -162,14 +183,15 @@ Create a wrapper once and use it in all specs:
 // tests/support/withSeo.ts
 import { createSeoTest } from 'playwright-seo';
 import seoUser from '../../playwright-seo.config';
-import { toRuleConfig, toRunnerOptions } from 'playwright-seo/config';
+import { toRuleConfig, toRunnerOptions } from 'playwright-seo';
 
 export const { test, expect } = createSeoTest({
   // Feed the rules/thresholds
   defaults: { config: toRuleConfig(seoUser) },
 
-  // Runner behavior (dedupe per worker)
-  dedupePerWorker: toRunnerOptions(seoUser).dedupePerWorker
+  // Runner behavior
+  dedupePerWorker: toRunnerOptions(seoUser).dedupePerWorker,
+  severity: toRunnerOptions(seoUser).severity, // 'error' | 'warning'
 });
 ```
 
@@ -244,7 +266,7 @@ test.describe('Smoke without SEO', () => {
 import { test, expect } from '@playwright/test';
 import { runSeoChecks } from 'playwright-seo';
 import seoUser from '../../playwright-seo.config';
-import { toRuleConfig } from 'playwright-seo/config';
+import { toRuleConfig } from 'playwright-seo';
 
 test('Home SEO (focused)', async ({ page }) => {
   await page.goto('/');
@@ -270,19 +292,25 @@ Key options you can toggle:
 - `enforceImgAlt`: require useful `alt` (allows `alt=""` only when **not** inside `<a>`)  
 - `forbidNoindexOnProd`: forbid `noindex` when `APP_ENV === 'production'`  
 - `checkMainResponseStatus`: unexpected status codes on the main response  
-- `skipIfNoindex`: skip audit if `meta noindex` or `X‑Robots‑Tag: noindex` is present  
+- `skipIfNoindex`: skip audit if `meta noindex` or `X-Robots-Tag: noindex` is present  
 - `excludeUrls`: patterns to ignore (glob or RegExp)  
 - `waitFor`: `'load' | 'domcontentloaded' | 'networkidle'`  
 - `maxNodesPerIssue`: how many sample nodes to show per rule
 
 ### Runner (execution behavior)
 
-- `runner.dedupePerWorker` (default **true**): Audit each **normalized URL once per worker** to avoid duplicated logs on large suites.
+- `runner.dedupePerWorker` (default **true**): Audit each **normalized URL once per worker** to avoid duplicated logs.  
+- `runner.severity` (`'error'` | `'warning'`, default **`'error'`**):
+  - **`error`** → violations **fail the test** (current default behavior)
+  - **`warning`** → violations are **logged** and **annotated**, but **don’t fail**
 
-Use it in your wrapper via:
+Use them in your wrapper via:
 ```ts
-import { toRunnerOptions } from 'playwright-seo/config';
-createSeoTest({ dedupePerWorker: toRunnerOptions(seoUser).dedupePerWorker });
+import { toRunnerOptions } from 'playwright-seo';
+createSeoTest({
+  dedupePerWorker: toRunnerOptions(seoUser).dedupePerWorker,
+  severity: toRunnerOptions(seoUser).severity,
+});
 ```
 
 ---
@@ -296,12 +324,16 @@ Helper for config IntelliSense and validation in `playwright-seo.config.ts`.
 Converts user config → internal rule config consumed by `runSeoChecks`.
 
 ### `toRunnerOptions`
-Extracts runner options (e.g., `dedupePerWorker`) from the user config.
+Extracts runner options (e.g., `dedupePerWorker`, `severity`) from the user config.
 
 ### `createSeoTest`
 Creates a Playwright `test` wrapper that runs the SEO audit after each test.
 ```ts
-createSeoTest(opts?: { defaults?: RunOptions; dedupePerWorker?: boolean })
+createSeoTest(opts?: {
+  defaults?: RunOptions;
+  dedupePerWorker?: boolean;
+  severity?: 'error' | 'warning';
+})
 ```
 
 ### `runSeoChecks`
@@ -314,7 +346,7 @@ const result = await runSeoChecks(page, { config, formatter? });
 
 ## Output & Logging
 
-Failure output follows Playwright’s style and includes the audited **URL**, the **failing rule**, and **pretty‑printed HTML** snippets for problematic elements, e.g.:
+Failure output follows Playwright’s style and includes the audited **URL**, the **failing rule**, and **pretty-printed HTML** snippets for problematic elements, e.g.:
 
 ```
 SEO violations at: https://example.com/
@@ -325,6 +357,10 @@ SEO violations at: https://example.com/
 <img src="/x.webp" alt="">
 ```
 ```
+
+**Severity behavior**:
+- **`error`**: prints the violations and **fails** the test (`expect(...).toBeTruthy()`).
+- **`warning`**: prints the violations via `console.warn` and adds a `seo-warning` **annotation** to the test (visible in the HTML report), but **does not fail**.
 
 ---
 
@@ -352,6 +388,10 @@ Install Node types and ensure they’re enabled:
 { "compilerOptions": { "types": ["node"] } }
 ```
 
+**Module resolution (TS)**  
+You can import from the **root** (`playwright-seo`) in any project.  
+The legacy subpath import (`playwright-seo/config`) is also supported (via `exports` + `typesVersions`) for projects using `moduleResolution: node`.
+
 **Update notifier in the CLI**  
 Silence with:
 ```bash
@@ -365,7 +405,7 @@ CI is silent by default (`CI=true`).
 
 **Do I have to change all my imports?**  
 Just once. Point tests to the wrapper (`../support/withSeo` or `@tests`).  
-Prefer a one‑off code mod if you have many files.  
+Prefer a one-off code mod if you have many files.  
 Alternatively, call `runSeoChecks` only where you want it.
 
 **Does it work with plain JS projects?**  
@@ -374,11 +414,14 @@ Yes. The wrapper and CLI work in JS. If you use TS, you’ll get IntelliSense in
 **Monorepo?**  
 Add a `playwright-seo.config.ts` per package that has tests, and import it from that package’s `playwright.config.ts`.
 
-**Where do I configure “dedupe per worker”?**  
-In your config file under `runner.dedupePerWorker`, and pass it to the wrapper:
+**Where do I configure “dedupe per worker” and severity?**  
+In your config under `runner`, and pass it to the wrapper via `toRunnerOptions`:
 ```ts
-import { toRunnerOptions } from 'playwright-seo/config';
-createSeoTest({ dedupePerWorker: toRunnerOptions(seoUser).dedupePerWorker });
+import { toRunnerOptions } from 'playwright-seo';
+createSeoTest({
+  dedupePerWorker: toRunnerOptions(seoUser).dedupePerWorker,
+  severity: toRunnerOptions(seoUser).severity
+});
 ```
 
 ---
@@ -387,7 +430,7 @@ createSeoTest({ dedupePerWorker: toRunnerOptions(seoUser).dedupePerWorker });
 
 PRs are welcome! Please:
 - Run `npm run typecheck` and `npm run build`.
-- Add tests or examples for new rules/behaviors.
+- Add tests or examples for new rules/behaviors (e.g., severity).
 - Keep the README and config template in sync.
 
 ---
@@ -395,7 +438,6 @@ PRs are welcome! Please:
 ## License
 
 MIT © Contributors
-
 
 ---
 

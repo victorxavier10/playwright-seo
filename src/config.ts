@@ -28,6 +28,8 @@ export type PlaywrightSeoUserConfig = {
   runner?: {
     /** Avoid auditing the same normalized URL more than once per worker */
     dedupePerWorker?: boolean;
+    /** Severity of SEO audit outcome: 'error' fails the test, 'warning' logs only */
+    severity?: 'error' | 'warning';
   };
 };
 
@@ -66,6 +68,7 @@ export function toRuleConfig(user: PlaywrightSeoUserConfig): SeoRuleConfig {
 /** Extract runner options from user config (with sensible defaults) */
 export function toRunnerOptions(user: PlaywrightSeoUserConfig) {
   return {
-    dedupePerWorker: user.runner?.dedupePerWorker ?? true
+    dedupePerWorker: user.runner?.dedupePerWorker ?? true,
+    severity: user.runner?.severity ?? 'error' as 'error' | 'warning',
   };
 }
