@@ -7,14 +7,14 @@ export async function runSeoChecks(page: Page, options: RunOptions = {}): Promis
   const cfg = { ...defaultConfig, ...(options.config ?? {}) };
   const url = page.url();
 
-  // Excluir URLs cedo
+  // Exclude URLs early
   if (cfg.excludeUrls.length && isExcludedUrl(url, cfg.excludeUrls)) {
     return { ok: true, issues: [], skipped: 'excluded', message: `SEO audit skipped (excluded) at: ${url}` };
   }
 
   await page.waitForLoadState(cfg.waitFor);
 
-  // Status principal (fail-fast emite issue já aqui)
+  // Main status (fail-fast issues issue here)
   const earlyIssues: SeoIssue[] = [];
   if (cfg.checkMainResponseStatus) {
     try {
@@ -33,7 +33,7 @@ export async function runSeoChecks(page: Page, options: RunOptions = {}): Promis
     }
   }
 
-  // Coleta única de DOM + noindex
+  // Single collection of DOM + noindex
   const { dom, metaNoindex, headerNoindex } = await collectDom(page, cfg, options.headerCheck !== false);
 
   if (cfg.skipIfNoindex && (metaNoindex || headerNoindex)) {
