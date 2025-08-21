@@ -32,6 +32,6 @@ export type SeoRuleConfig = {
 
 export type RunOptions = {
   config?: SeoRuleConfig;
-  headerCheck?: boolean; // checar X-Robots-Tag
+  headerCheck?: boolean; // check X-Robots-Tag
   formatter?: (url: string, issues: SeoIssue[]) => string;
 };
