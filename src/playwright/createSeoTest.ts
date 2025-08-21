@@ -10,7 +10,12 @@ type SeoFixtures = {
 };
 
 /** Creates a Playwright test wrapper that runs the SEO audit after each test. */
-export function createSeoTest(opts?: { defaults?: RunOptions; dedupePerWorker?: boolean }) {
+export function createSeoTest(opts?: {
+  defaults?: RunOptions;
+  dedupePerWorker?: boolean;
+  /** 'error' fails the test, 'warning' logs only */
+  severity?: 'error' | 'warning';
+}) {
   const audited = new Set<string>();
   const normalize = (u: string) => {
     try {
@@ -21,8 +26,9 @@ export function createSeoTest(opts?: { defaults?: RunOptions; dedupePerWorker?: 
     }
   };
 
-  // default to true if not provided (reduces noise by design)
+  // defaults: reduce noise & fail tests by default
   const dedupe = opts?.dedupePerWorker ?? true;
+  const severity: 'error' | 'warning' = opts?.severity ?? 'error';
 
   const test = base.extend<SeoFixtures>({
     seoAudit: [true, { option: true }],
@@ -44,8 +50,28 @@ export function createSeoTest(opts?: { defaults?: RunOptions; dedupePerWorker?: 
       }
 
       const res = await runSeoChecks(page, seoOptions);
-      expect.soft(res.ok, res.message).toBeTruthy();
-    }
+
+      if (severity === 'error') {
+        // hard fail
+        expect(res.ok, res.message).toBeTruthy();
+      } else {
+        // warning-only
+        if (!res.ok) {
+          // Log in console output
+          // eslint-disable-next-line no-console
+          console.warn(res.message);
+          // Optional: annotate test (appears in HTML report)
+          try {
+            (testInfo as any).annotations?.push?.({
+              type: 'seo-warning',
+              description: res.message,
+            });
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    },
   });
 
   return { test, expect };
