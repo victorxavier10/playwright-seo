@@ -26,7 +26,11 @@
     "./config": {
       "types": "./dist/config.d.ts",
       "import": "./dist/config.mjs",
-      "require": "./dist/config.cjs"
+      "require": "./dist/config.cjs",
+      "default": "./dist/config.mjs"
+    },
+    "./package.json": "./package.json"
+  },
     }
   },
   "bin": {
