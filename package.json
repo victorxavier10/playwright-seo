@@ -29,6 +29,11 @@
       "require": "./dist/config.cjs",
       "default": "./dist/config.mjs"
     },
+    "./fixture": {
+      "types": "./dist/fixture.d.ts",
+      "import": "./dist/fixture.mjs",
+      "require": "./dist/fixture.cjs"
+    },
     "./package.json": "./package.json"
   },
   "typesVersions": {
