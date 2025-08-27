@@ -16,8 +16,9 @@
 - [Installation](#installation)
 - [Quick Start](#quick-start)
   - [1) Generate config](#1-generate-config)
-  - [2) Wire config into Playwright](#2-wire-config-into-playwright)
-  - [3) Enable audit globally (one-liner)](#3-enable-audit-globally-one-liner)
+  - [2) Config SEO tests per project/environment (via options fixtures) -> Recommended](#2-config-seo-tests-per-projectenvironment-via-options-fixtures---recommended)
+  - [3) Automatic SEO tests](#3-automatic-seo-tests)
+  - [*) Other ways -> Alternatives](#other-ways---alternatives)
 - [Targeted Usage](#targeted-usage)
   - [Per project (e.g., staging)](#per-project-eg-staging)
   - [Per spec / describe](#per-spec--describe)
@@ -69,14 +70,14 @@
 
 ### npm
 ```bash
-npm i -D playwright-seo @playwright/test
+npm i -D playwright-seo
 # (optional) if your editor complains about Node APIs used by the CLI:
 npm i -D @types/node
 ```
 
 ### Yarn
 ```bash
-yarn add -D playwright-seo @playwright/test
+yarn add -D playwright-seo
 # (optional)
 yarn add -D @types/node
 ```
@@ -118,10 +119,10 @@ export default defineSeoConfig({
   enforceSingleH1: true,
 
   enforceTitle: true,
-  title: { min: 10, max: 70 },
+  title: { min: 10, max: 70 }, // Size
 
   enforceMetaDescription: true,
-  metaDescription: { min: 50, max: 160 },
+  metaDescription: { min: 50, max: 160 }, // Size
 
   enforceCanonical: true,
   enforceImgAlt: true,
@@ -146,7 +147,96 @@ export default defineSeoConfig({
 });
 ```
 
-### 2) Wire config into Playwright
+### 2) Config SEO tests per project/environment (via options fixtures) -> Recommended
+
+You can pass `seoAudit`/`seoOptions` through `playwright.config.ts` using option fixtures:
+
+```ts
+// playwright.config.ts
+import { defineConfig } from '@playwright/test';
+import type { SeoAutoFixtures } from 'playwright-seo/fixture';
+import seoUser from './playwright-seo.config';
+import { toRuleConfig } from 'playwright-seo';
+
+export default defineConfig<SeoAutoFixtures>({
+  projects: [
+    {
+      name: 'e2e-seo',
+      use: {
+        /**
+         * Toggle SEO audit by environment // optional
+         * seoAudit: process.env.APP_ENV !== 'development',
+        **/
+        seoAudit: true,
+        // Apply your generated config:
+        seoOptions: {
+          config: toRuleConfig(seoUser), 
+          severity: 'warning' // optional
+        }, 
+      } as any
+    }
+  ]
+});
+```
+This way you can turn things on/off and parameterize them per project without touching the specs, following Playwright's official fixture best practices.
+
+*Other *configuration* methods available
+
+### 3) Automatic SEO tests
+
+```ts
+// example.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('SEO Tests in playwright-seo - npm', async ({ page }) => {
+  await page.goto('https://www.npmjs.com/package/playwright-seo');
+  await expect(page).toHaveTitle(/playwright-seo - npm/);
+  // ✅ SEO audit runs automatically after the test
+});
+```
+
+*Other ways of *use* available
+
+### *) Other ways -> Alternatives
+
+**Alternative 1 - Auto-fixture**
+
+Create `tests/support/seo.auto.ts` file:
+
+```ts
+// tests/support/seo.auto.ts
+import { test as base, expect } from '@playwright/test';
+import seoUser from '../../playwright-seo.config';
+import { toRuleConfig, toRunnerOptions } from 'playwright-seo';
+import { seoAuto } from 'playwright-seo/fixture';
+
+// Integra o audit como auto-fixture (sem chamar por spec)
+export const test = base.extend(
+  seoAuto({
+    defaults: { config: toRuleConfig(seoUser) },
+    dedupePerWorker: toRunnerOptions(seoUser).dedupePerWorker,
+    severity: toRunnerOptions(seoUser).severity, // 'error' | 'warning'
+  })
+);
+export { expect } from '@playwright/test';
+
+```
+
+Use `test` in your specs
+
+```ts
+// before: import { test, expect } from '@playwright/test'
+import { test, expect } from '../support/seo.auto';
+
+test('SEO Tests in playwright-seo - npm', async ({ page }) => {
+  await page.goto('https://www.npmjs.com/package/playwright-seo');
+  await expect(page).toHaveTitle(/playwright-seo - npm/);
+  // ✅ SEO audit runs automatically after the test
+});
+
+```
+
+**Alternative 2 - Wrapper**
 
 ```ts
 // playwright.config.ts
@@ -175,7 +265,7 @@ export default defineConfig({
 > `toRuleConfig` converts your user config into the internal format used by the engine.  
 > Prefer importing from the **root** (`playwright-seo`). The legacy subpath (`playwright-seo/config`) also works.
 
-### 3) Enable audit globally (one-liner)
+*Enable audit globally (one-liner)*
 
 Create a wrapper once and use it in all specs:
 
@@ -201,12 +291,14 @@ Use the wrapper in your tests (swap one import):
 // before: import { test, expect } from '@playwright/test'
 import { test, expect } from '../support/withSeo';
 
-test('Home', async ({ page }) => {
-  await page.goto('/');
-  // ...your test...
+test('SEO Tests in playwright-seo - npm', async ({ page }) => {
+  await page.goto('https://www.npmjs.com/package/playwright-seo');
+  await expect(page).toHaveTitle(/playwright-seo - npm/);
   // ✅ SEO audit runs automatically after the test
 });
 ```
+
+---
 
 **Optional alias via `tsconfig.json`:**
 ```json
@@ -268,8 +360,9 @@ import { runSeoChecks } from 'playwright-seo';
 import seoUser from '../../playwright-seo.config';
 import { toRuleConfig } from 'playwright-seo';
 
-test('Home SEO (focused)', async ({ page }) => {
-  await page.goto('/');
+test('SEO Tests in playwright-seo - npm', async ({ page }) => {
+  await page.goto('https://www.npmjs.com/package/playwright-seo');
+  await expect(page).toHaveTitle(/playwright-seo - npm/);
   const res = await runSeoChecks(page, { config: toRuleConfig(seoUser) });
   expect(res.ok, res.message).toBeTruthy();
 });
@@ -349,7 +442,7 @@ const result = await runSeoChecks(page, { config, formatter? });
 Failure output follows Playwright’s style and includes the audited **URL**, the **failing rule**, and **pretty-printed HTML** snippets for problematic elements, e.g.:
 
 ```
-SEO violations at: https://example.com/
+SEO violations at: https://www.npmjs.com/package/playwright-seo
 ────────────────────────────────────────
 [img-alt] Images without useful alt: 2
   • Element 1:

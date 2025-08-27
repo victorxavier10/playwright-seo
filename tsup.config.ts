@@ -4,12 +4,14 @@ export default defineConfig({
   entry: {
     'index': 'src/index.ts',
     'config': 'src/config.ts',
+    'fixture': 'src/playwright/fixture.ts',
     'bin/cli': 'src/bin/cli.ts', 
   },
   dts: {
     entry: {
       index: 'src/index.ts',
       config: 'src/config.ts',
+      fixture: 'src/playwright/fixture.ts',
     },
   },
   format: ['esm', 'cjs'],
