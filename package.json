@@ -41,6 +41,7 @@
       "config": [
         "dist/config.d.ts"
       ],
+      "fixture": ["dist/fixture.d.ts"],
       "*": [
         "dist/index.d.ts"
       ]
