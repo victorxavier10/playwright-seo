@@ -18,3 +18,4 @@ export {
     toRunnerOptions,
 } from './config';
 export type { PlaywrightSeoUserConfig } from './config';
+export type { SeoAutoFixtures } from './playwright/fixture';
