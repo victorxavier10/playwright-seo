@@ -149,16 +149,34 @@ export default defineSeoConfig({
 
 ### 2) Config SEO tests per project/environment (via options fixtures) -> Recommended
 
+Create `tests/support/seo.auto.ts` file or add in your fixtures file:
+
+```ts
+// tests/support/seo.auto.ts
+import { test as base, expect } from '@playwright/test';
+import seoUser from '../../playwright-seo.config';
+import { toRuleConfig } from 'playwright-seo';
+import { seoAuto } from 'playwright-seo/fixture';
+
+// Audit with auto-fixture
+export const test = base.extend(
+  seoAuto({
+    defaults: { config: toRuleConfig(seoUser) }
+  })
+);
+export { expect } from '@playwright/test';
+
+```
+
 You can pass `seoAudit`/`seoOptions` through `playwright.config.ts` using option fixtures:
 
 ```ts
 // playwright.config.ts
 import { defineConfig } from '@playwright/test';
-import type { SeoAutoFixtures } from 'playwright-seo/fixture';
 import seoUser from './playwright-seo.config';
 import { toRuleConfig } from 'playwright-seo';
 
-export default defineConfig<SeoAutoFixtures>({
+export default defineConfig({
   projects: [
     {
       name: 'e2e-seo',
@@ -168,12 +186,10 @@ export default defineConfig<SeoAutoFixtures>({
          * seoAudit: process.env.APP_ENV !== 'development',
         **/
         seoAudit: true,
-        // Apply your generated config:
         seoOptions: {
-          config: toRuleConfig(seoUser), 
-          severity: 'warning' // optional
-        }, 
-      } as any
+          config: toRuleConfig(seoUser)
+        }
+      }
     }
   ]
 });
@@ -186,7 +202,7 @@ This way you can turn things on/off and parameterize them per project without to
 
 ```ts
 // example.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../support/seo.auto';
 
 test('SEO Tests in playwright-seo - npm', async ({ page }) => {
   await page.goto('https://www.npmjs.com/package/playwright-seo');
@@ -199,44 +215,7 @@ test('SEO Tests in playwright-seo - npm', async ({ page }) => {
 
 ### *) Other ways -> Alternatives
 
-**Alternative 1 - Auto-fixture**
-
-Create `tests/support/seo.auto.ts` file:
-
-```ts
-// tests/support/seo.auto.ts
-import { test as base, expect } from '@playwright/test';
-import seoUser from '../../playwright-seo.config';
-import { toRuleConfig, toRunnerOptions } from 'playwright-seo';
-import { seoAuto } from 'playwright-seo/fixture';
-
-// Integra o audit como auto-fixture (sem chamar por spec)
-export const test = base.extend(
-  seoAuto({
-    defaults: { config: toRuleConfig(seoUser) },
-    dedupePerWorker: toRunnerOptions(seoUser).dedupePerWorker,
-    severity: toRunnerOptions(seoUser).severity, // 'error' | 'warning'
-  })
-);
-export { expect } from '@playwright/test';
-
-```
-
-Use `test` in your specs
-
-```ts
-// before: import { test, expect } from '@playwright/test'
-import { test, expect } from '../support/seo.auto';
-
-test('SEO Tests in playwright-seo - npm', async ({ page }) => {
-  await page.goto('https://www.npmjs.com/package/playwright-seo');
-  await expect(page).toHaveTitle(/playwright-seo - npm/);
-  // ✅ SEO audit runs automatically after the test
-});
-
-```
-
-**Alternative 2 - Wrapper**
+**Alternative 1 - Wrapper**
 
 ```ts
 // playwright.config.ts
