@@ -54,22 +54,28 @@ export function formatIssues(url: string, issues: SeoIssue[]): string {
   lines.push('────────────────────────────────────────');
   for (const issue of issues) {
     lines.push(`[${issue.ruleId}] ${issue.message}`);
+
+    const sels = issue.nodesSelectors ?? [];
     const nodes = issue.nodesHtml ?? [];
+
     nodes.forEach((h, idx) => {
+      const sel = sels[idx];
       lines.push(`  • Element ${idx + 1}:`);
+      if (sel) lines.push(`    selector: ${sel}`);
       lines.push('```html');
       lines.push(prettyHtml(h));
       lines.push('```');
     });
-    const hiddenCount =
-      (issue.nodesSelectors?.length ?? 0) - (issue.nodesHtml?.length ?? 0);
+
+    const hiddenCount = Math.max(0, sels.length - nodes.length);
     if (hiddenCount > 0) lines.push(`  … +${hiddenCount} elementos omitidos`);
-    lines.push('');
+
+    lines.push(''); // separate issues
   }
   return lines.join('\n');
 }
 
-/** Coleta DOM e flags numa única evaluate (+ header X-Robots-Tag opcional) */
+/** DOM e flags in unique evaluate (+ header X-Robots-Tag optional) */
 export async function collectDom(
   page: Page,
   cfg: Required<SeoRuleConfig>,
@@ -80,6 +86,27 @@ export async function collectDom(
   const { metaNoindex, dom } = await page.evaluate((maxNodes) => {
     const q = (sel: string) => Array.from(document.querySelectorAll(sel));
 
+    // local helpers
+    const selectorFor = (el: Element) => {
+      const base = el.tagName.toLowerCase();
+      const id = (el as HTMLElement).id;
+      const cls = (el as HTMLElement).className?.toString().trim();
+      return base
+        + (id ? `#${id}` : '')
+        + (cls ? '.' + cls.split(/\s+/).filter(Boolean).join('.') : '');
+    };
+    const htmlOf = (el: Element) => {
+      try {
+        let h = (el as HTMLElement).outerHTML || `<${el.tagName.toLowerCase()}>`;
+        if (h.length > 800) h = h.slice(0, 800) + '…';
+        return h;
+      } catch {
+        return `<${el.tagName.toLowerCase()}>`;
+      }
+    };
+    const take = <T,>(arr: T[]) => arr.slice(0, maxNodes);
+
+    // IMG alt
     const imgs = q('img') as HTMLImageElement[];
     const imgWithoutAltNodes = imgs.filter((img) => {
       const alt = img.getAttribute('alt');
@@ -91,36 +118,75 @@ export async function collectDom(
       const hasUsefulAlt = alt !== null && alt.trim() !== '';
       return !(hasUsefulAlt || isDecorative);
     });
-    const limitedImgs = imgWithoutAltNodes.slice(0, maxNodes);
+    const limitedImgs = take(imgWithoutAltNodes);
 
-    const metaNoindex =
+    // noindex Flags
+    const hasMetaNoindex =
       !!document.querySelector('meta[name="robots"][content*="noindex" i]') ||
       !!document.querySelector('meta[name="googlebot"][content*="noindex" i]');
+    const noindexMetas = q('meta[name="robots"], meta[name="googlebot"]')
+      .filter((m) => /noindex/i.test((m.getAttribute('content') || '')))
+    const noindexLimited = take(noindexMetas);
+
+    // Node <html> (para html-lang)
+    const htmlEl = document.documentElement;
+    const htmlSelector = 'html';
+    const htmlOpenTag = (() => {
+      const attrs = htmlEl.getAttributeNames().map(n => `${n}="${htmlEl.getAttribute(n) ?? ''}"`).join(' ');
+      return `<html${attrs ? ' ' + attrs : ''}>`;
+    })();
+
+    // Viewport, Title, Meta Description
+    const viewportEl = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null;
+    const titleEl = document.querySelector('title');
+    const metaDescEl = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+
+    // Canonicals
+    const canonicalEls = q('link[rel="canonical"]') as HTMLLinkElement[];
+    const canonicalLimited = take(canonicalEls);
+
+    // H1
+    const h1Els = q('h1');
+    const h1Limited = take(h1Els);
 
     const dom = {
-      htmlLang: document.documentElement.getAttribute('lang') || '',
-      hasViewport: !!document.querySelector('meta[name="viewport"]'),
-      title: document.title?.trim() || '',
-      metaDescription:
-        (document.querySelector('meta[name="description"]') as HTMLMetaElement | null)?.content?.trim() || '',
-      canonicals: (q('link[rel="canonical"]') as HTMLLinkElement[]).map(
-        (n) => (n as HTMLLinkElement).href
-      ),
-      h1Count: document.querySelectorAll('h1').length,
+      // rules
+      htmlLang: htmlEl.getAttribute('lang') || '',
+      hasViewport: !!viewportEl,
+      title: titleEl?.textContent?.trim() || '',
+      metaDescription: metaDescEl?.getAttribute('content')?.trim() || '',
+      canonicals: (canonicalEls).map((n) => (n as HTMLLinkElement).href),
+      h1Count: h1Els.length,
+
+      // Impression node collections
+      htmlNode: { selector: htmlSelector, html: htmlOpenTag }, // só a tag de abertura
+      viewportNodes: viewportEl ? { selectors: [selectorFor(viewportEl)], html: [htmlOf(viewportEl)] } : null,
+      titleNodes: titleEl ? { selectors: [selectorFor(titleEl)], html: [htmlOf(titleEl)] } : null,
+      metaDescriptionNodes: metaDescEl ? { selectors: [selectorFor(metaDescEl)], html: [htmlOf(metaDescEl)] } : null,
+      canonicalNodes: {
+        selectors: canonicalEls.map(selectorFor),
+        html: canonicalLimited.map(htmlOf)
+      },
+      h1Nodes: {
+        total: h1Els.length,
+        selectors: h1Els.map(selectorFor),
+        html: h1Limited.map(htmlOf)
+      },
       imgWithoutAlt: {
         total: imgWithoutAltNodes.length,
-        selectors: imgWithoutAltNodes.map((el) => {
-          const id = (el as HTMLElement).id;
-          const cls = (el as HTMLElement).className?.toString().trim();
-          const base = el.tagName.toLowerCase();
-          return base + (id ? `#${id}` : '') + (cls ? '.' + cls.split(/\s+/).filter(Boolean).join('.') : '');
-        }),
-        html: limitedImgs.map((el) => el.outerHTML)
+        selectors: imgWithoutAltNodes.map(selectorFor),
+        html: limitedImgs.map(htmlOf)
       },
-      hasNoindex: metaNoindex
+      noindexMeta: {
+        total: noindexMetas.length,
+        selectors: noindexMetas.map(selectorFor),
+        html: noindexLimited.map(htmlOf),
+      },
+
+      hasNoindex: hasMetaNoindex
     };
 
-    return { metaNoindex, dom };
+    return { metaNoindex: hasMetaNoindex, dom };
   }, cfg.maxNodesPerIssue);
 
   let headerNoindex = false;
@@ -132,9 +198,7 @@ export async function collectDom(
         const v = Array.isArray(xrt) ? xrt.join(',') : xrt;
         headerNoindex = /noindex/i.test(v);
       }
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }
 
   return { dom, metaNoindex, headerNoindex };
