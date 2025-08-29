@@ -1,6 +1,6 @@
 {
   "name": "playwright-seo",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "SEO checks for Playwright — simples, configurável e agnóstico.",
   "license": "MIT",
   "author": "Victor Xavier",
@@ -34,7 +34,7 @@
       "import": "./dist/fixture.mjs",
       "require": "./dist/fixture.cjs"
     },
-      "./register": {
+    "./register": {
       "types": "./dist/register.d.ts",
       "import": "./dist/empty.js",
       "require": "./dist/empty.cjs",
