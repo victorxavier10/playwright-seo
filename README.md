@@ -173,6 +173,7 @@ You can pass `seoAudit`/`seoOptions` through `playwright.config.ts` using option
 ```ts
 // playwright.config.ts
 import { defineConfig } from '@playwright/test';
+import type { SeoAutoFixtures } from 'playwright-seo/fixture';
 import seoUser from './playwright-seo.config';
 import { toRuleConfig } from 'playwright-seo';
 
@@ -186,9 +187,7 @@ export default defineConfig({
          * seoAudit: process.env.APP_ENV !== 'development',
         **/
         seoAudit: true,
-        seoOptions: {
-          config: toRuleConfig(seoUser)
-        }
+        seoOptions: { config: toRuleConfig(seoUser) },
       }
     }
   ]
