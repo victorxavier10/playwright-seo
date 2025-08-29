@@ -1,0 +1,2 @@
+// src/empty.ts
+export {};

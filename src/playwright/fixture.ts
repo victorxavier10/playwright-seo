@@ -12,7 +12,7 @@ export function seoAuto(params?: {
     severity?: 'error' | 'warning';
 }) {
     const dedupe = params?.dedupePerWorker ?? true;
-    const severity = params?.severity ?? 'error';
+    const defaultSeverity = params?.severity ?? 'error';
 
     const audited = new Set<string>();
     const normalize = (u: string) => {
@@ -25,26 +25,31 @@ export function seoAuto(params?: {
     };
 
     return {
-        // option fixtures (configurable via playwright.config.ts / test.use)
-        seoAudit: [true, { option: true }] as const,
-        seoOptions: [{ ...(params?.defaults ?? {}), severity }, { option: true }] as const,
+        // option fixtures (config playwright.config.ts / test.use)
+        seoAudit: [true, { option: true }] as [boolean, { option: true }],
+        seoOptions: [
+            { ...(params?.defaults ?? {}), severity: defaultSeverity },
+            { option: true }
+        ] as [RunOptions, { option: true }],
 
-        // auto-fixture: always runs after each test
-        page: [
+        // auto-fixture
+        _seoAuto: [
             async (
                 {
                     page,
                     seoAudit,
                     seoOptions,
                 }: { page: Page; seoAudit: boolean; seoOptions: RunOptions },
-                use: (p: Page) => Promise<void>,
+                use: (p?: unknown) => Promise<void>,
                 testInfo: TestInfo
             ) => {
-                // Run the “normal” test first
-                await use(page);
+                // test again
+                await use();
 
+                // rules
                 if (!seoAudit) return;
                 if (testInfo.status === 'skipped') return;
+                if (!page || typeof page.url !== 'function') return;
 
                 const url = page.url();
                 if (!url || url.startsWith('about:')) return;
@@ -57,22 +62,31 @@ export function seoAuto(params?: {
 
                 const res = await runSeoChecks(page, seoOptions);
 
-                // effective severity: can come from the global config (params.severity) or be overridden via test.use({ seoOptions: { severity: 'warning' } })
-                const effectiveSeverity = seoOptions?.severity ?? severity;
+                // severity
+                const severity = seoOptions?.severity ?? defaultSeverity;
 
-                if (effectiveSeverity === 'warning') {
+                if (severity === 'warning') {
                     if (!res.ok) {
                         console.warn(res.message);
-                        testInfo.annotations.push({ type: 'seo-warning', description: res.message });
+                        testInfo.annotations.push({
+                            type: 'seo-warning',
+                            description: res.message,
+                        });
                     }
                     return;
                 }
 
-                // default: 'error' → test fails
                 if (!res.ok) throw new Error(res.message);
             },
-            { auto: true },
-        ] as const,
+            { auto: true }
+        ] as [
+                (
+                    args: { page: Page; seoAudit: boolean; seoOptions: RunOptions },
+                    use: (p?: unknown) => Promise<void>,
+                    testInfo: TestInfo
+                ) => Promise<void>,
+                { auto: true }
+            ],
     };
 }
 
