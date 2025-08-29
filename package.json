@@ -34,6 +34,12 @@
       "import": "./dist/fixture.mjs",
       "require": "./dist/fixture.cjs"
     },
+      "./register": {
+      "types": "./dist/register.d.ts",
+      "import": "./dist/empty.js",
+      "require": "./dist/empty.cjs",
+      "default": "./dist/empty.js"
+    },
     "./package.json": "./package.json"
   },
   "typesVersions": {
