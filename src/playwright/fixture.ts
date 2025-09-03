@@ -69,8 +69,16 @@ export function seoAuto(params?: {
                     if (!res.ok) {
                         console.warn(res.message);
                         testInfo.annotations.push({
-                            type: 'seo-warning',
+                            type: 'flaky',
                             description: res.message,
+                        });
+                        await testInfo.attach('seo-warnings', {
+                            body: res.message,
+                            contentType: 'text/markdown'
+                        });
+                        await testInfo.attach('seo-issues.json', {
+                            body: Buffer.from(JSON.stringify(res.issues, null, 2)),
+                            contentType: 'application/json'
                         });
                     }
                     return;
