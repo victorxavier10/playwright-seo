@@ -22,13 +22,13 @@ export async function runSeoChecks(page: Page, options: RunOptions = {}): Promis
       if (!resp.ok()) {
         earlyIssues.push({
           ruleId: 'main-status',
-          message: `Status não OK: ${resp.status()} ${resp.statusText()}`
+          message: `Status no OK: ${resp.status()} ${resp.statusText()}`
         });
       }
     } catch (e: any) {
       earlyIssues.push({
         ruleId: 'main-status',
-        message: `Falha ao checar status: ${e?.message ?? e}`
+        message: `Status Check Failed: ${e?.message ?? e}`
       });
     }
   }

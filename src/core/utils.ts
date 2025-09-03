@@ -61,15 +61,16 @@ export function formatIssues(url: string, issues: SeoIssue[]): string {
     nodes.forEach((h, idx) => {
       const sel = sels[idx];
       lines.push(`  • Element ${idx + 1}:`);
+      lines.push(' ');
       if (sel) lines.push(`    selector: ${sel}`);
-      lines.push('```html');
+      lines.push(' ');
+      lines.push(' ');
       lines.push(prettyHtml(h));
-      lines.push('```');
+      lines.push(' ');
     });
 
     const hiddenCount = Math.max(0, sels.length - nodes.length);
-    if (hiddenCount > 0) lines.push(`  … +${hiddenCount} elementos omitidos`);
-
+    if (hiddenCount > 0) lines.push(`  … +${hiddenCount} omitted elements`);
     lines.push(''); // separate issues
   }
   return lines.join('\n');

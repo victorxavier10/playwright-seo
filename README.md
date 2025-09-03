@@ -133,7 +133,7 @@ export default defineSeoConfig({
   skipIfNoindex: true,
   maxNodesPerIssue: 5,
   excludeUrls: [], // e.g. ['/', '/admin/*', /\/api\//]
-  waitFor: 'load', // 'load' | 'domcontentloaded' | 'networkidle'
+  waitFor: 'domcontentloaded', // 'load' | 'domcontentloaded' | 'networkidle'
 
   // Runner (how the audit is executed)
   runner: {
@@ -153,20 +153,22 @@ Create `tests/support/seo.auto.ts` file or add in your fixtures file:
 
 ```ts
 // tests/support/seo.auto.ts
-import { test as base, expect } from '@playwright/test';
-import seoUser from '../../playwright-seo.config';
-import { toRuleConfig } from 'playwright-seo';
+import { test as base } from '@playwright/test';
 import { seoAuto } from 'playwright-seo/fixture';
+import type { SeoAutoFixtures } from 'playwright-seo/fixture';
 
-// Audit with auto-fixture
-export const test = base.extend(
-  seoAuto({
-    defaults: { config: toRuleConfig(seoUser) }
-  })
-);
+export const test = base.extend<SeoAutoFixtures>({
+  // your fixtures...
+  // plug the SEO auto-fixture (runs after each test)
+  ...seoAuto(), // minimal: uses project config if available, else defaults
+});
+
 export { expect } from '@playwright/test';
 
 ```
+
+If you prefer to be explicit, you can still pass defaults:
+`...seoAuto({ defaults: { config: toRuleConfig(seoUser) } })`
 
 You can pass `seoAudit`/`seoOptions` through `playwright.config.ts` using option fixtures:
 
@@ -177,7 +179,7 @@ import type { SeoAutoFixtures } from 'playwright-seo/fixture';
 import seoUser from './playwright-seo.config';
 import { toRuleConfig } from 'playwright-seo';
 
-export default defineConfig({
+export default defineConfig<SeoAutoFixtures>({
   projects: [
     {
       name: 'e2e-seo',
@@ -187,7 +189,10 @@ export default defineConfig({
          * seoAudit: process.env.APP_ENV !== 'development',
         **/
         seoAudit: true,
-        seoOptions: { config: toRuleConfig(seoUser) },
+        seoOptions: { 
+          config: toRuleConfig(seoUser),
+          severity: toRunnerOptions(seoUser).severity
+        },
       }
     }
   ]
@@ -304,45 +309,44 @@ projects: [
   {
     name: 'staging',
     use: {
-      seoAudit: true,
-      seoOptions: {
-        config: {
-          ...toRuleConfig(seoUser),
+        seoAudit: true,
+        seoOptions: { 
+          config: toRuleConfig(seoUser),
+          severity: toRunnerOptions(seoUser).severity,
           excludeUrls: ['/preview/*', /\/internal\//]
-        }
-      }
-    } as any
+        },
+    }
   },
-  { name: 'local', use: { seoAudit: false } as any } // turn off locally
+  { name: 'local', use: { seoAudit: false } } // turn off locally
 ]
 ```
 
-### Per spec / describe
+## Per spec / describe
+
+### Spec - disable for this entire file
 
 ```ts
-import { test } from '../support/withSeo';
+// tests/support/seo.auto.ts
+import { test } from '../support/seo.auto.ts';
 
 // disable for this entire file
 test.use({ seoAudit: false });
 
-test.describe('Smoke without SEO', () => {
+test.describe('Test without SEO', () => {
   test('loads', async ({ page }) => { /* ... */ });
 });
 ```
 
-### Direct call in a focused test
+### describe block - disable for this entire block
 
 ```ts
-import { test, expect } from '@playwright/test';
-import { runSeoChecks } from 'playwright-seo';
-import seoUser from '../../playwright-seo.config';
-import { toRuleConfig } from 'playwright-seo';
+// tests/support/seo.auto.ts
+import { test } from '../support/seo.auto.ts';
 
-test('SEO Tests in playwright-seo - npm', async ({ page }) => {
-  await page.goto('https://www.npmjs.com/package/playwright-seo');
-  await expect(page).toHaveTitle(/playwright-seo - npm/);
-  const res = await runSeoChecks(page, { config: toRuleConfig(seoUser) });
-  expect(res.ok, res.message).toBeTruthy();
+test.describe('Test without SEO', () => {
+  // disable for this entire block
+  test.use({ seoAudit: false });
+  test('loads', async ({ page }) => { /* ... */ });
 });
 ```
 
